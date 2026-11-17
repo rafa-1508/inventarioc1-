@@ -1,0 +1,471 @@
+
+:root {
+  --bg: #0b0f0c;
+  --panel: #141c16;
+  --panel2: #1b261e;
+  --green: #72d58b;
+  --green2: #a1efb2;
+  --text: #eef5ef;
+  --muted: #a6b5a9;
+  --red: #ff7777;
+  --line: #2b3b30;
+  --yellow: #f3cf75;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 Arial, sans-serif;
+}
+
+.wrap {
+  max-width: 1200px;
+  margin: auto;
+  padding: 28px 20px 50px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 27px;
+}
+
+.brand p {
+  margin: 4px 0;
+  color: var(--muted);
+}
+
+.date {
+  color: var(--green2);
+  font-weight: bold;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.stat,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.stat span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 27px;
+  margin-top: 5px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+}
+
+.tab,
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 15px;
+  background: var(--panel2);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.tab.active,
+button.primary {
+  background: var(--green);
+  color: #07110a;
+}
+
+.tab:hover,
+button:hover {
+  filter: brightness(1.1);
+}
+
+button.danger {
+  background: #482323;
+  color: #ffdede;
+}
+
+button.small {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.panel h2 {
+  margin: 0 0 14px;
+  font-size: 19px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.toolbar input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.formgrid {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr auto;
+  gap: 9px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 5px;
+}
+
+.field input,
+input,
+select,
+textarea {
+  background: #0d140f;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px;
+  font: inherit;
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 1px solid var(--green);
+}
+
+.tablewrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 650px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: #203b28;
+  color: var(--green2);
+}
+
+.status.low {
+  background: #493b1e;
+  color: var(--yellow);
+}
+
+.status.zero {
+  background: #482323;
+  color: #ffaaaa;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 25px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.missing-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.missing-item:last-child {
+  border: 0;
+}
+
+.missing-item small {
+  display: block;
+  color: var(--muted);
+}
+
+.missing-item input {
+  max-width: 110px;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.reporthead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.reportbox {
+  background: #0d140f;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 14px;
+}
+
+.reportbox h3 {
+  margin: 0 0 8px;
+}
+
+.reportbox p {
+  margin: 5px 0;
+  color: var(--muted);
+}
+
+.print-only {
+  display: none;
+}
+
+/* FIRMA */
+
+.signature-area {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.signature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.signature-box {
+  background: #0d140f;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.signature-box label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.signature-canvas {
+  display: block;
+  width: 100%;
+  height: 135px;
+  background: white;
+  border: 1px dashed #7b8b7e;
+  border-radius: 7px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.signature-input {
+  font-family: cursive;
+  font-size: 25px !important;
+  background: white !important;
+  color: #111 !important;
+  height: 135px;
+  text-align: center;
+}
+
+.signature-help {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.signature-print-name {
+  display: none;
+}
+
+/* CELULARES */
+
+@media (max-width: 800px) {
+  .formgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .top {
+    align-items: flex-start;
+  }
+
+  .signature-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* IMPRESIÓN Y PDF */
+
+@media print {
+  body {
+    background: white;
+    color: #111;
+    font-size: 12px;
+  }
+
+  .wrap {
+    max-width: none;
+    padding: 0;
+  }
+
+  .top p,
+  .tabs,
+  .no-print,
+  .stats {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .panel,
+  .reportbox {
+    background: white;
+    color: #111;
+    border: 0;
+    padding: 0;
+  }
+
+  .panel h2 {
+    color: #111;
+  }
+
+  table {
+    min-width: 0;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid #ccc;
+    color: #111;
+    padding: 8px 5px;
+  }
+
+  .status {
+    background: white;
+    color: #111;
+    border: 1px solid #aaa;
+  }
+
+  .note {
+    color: #444;
+  }
+
+  .missing-item {
+    border-color: #ccc;
+  }
+
+  .missing-item small {
+    color: #444;
+  }
+
+  .signature-box {
+    background: white;
+    border: 0;
+    padding: 8px 0;
+  }
+
+  .signature-box label {
+    color: #222;
+  }
+
+  .signature-actions,
+  .signature-help,
+  .no-print-signature {
+    display: none !important;
+  }
+
+  .signature-input {
+    border: 0 !important;
+    background: white !important;
+    color: #111 !important;
+  }
+
+  .signature-canvas {
+    border: 1px solid #888;
+  }
+
+  .signature-area {
+    border-color: #aaa;
+  }
+
+  .signature-print-name {
+    display: block;
+    color: #111;
+  }
+}

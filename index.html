@@ -1,0 +1,714 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de inventario | Restaurante</title>
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <h1>Control de inventario</h1>
+    <p>Administracion diaria del restaurante</p>
+  </div>
+  <div class="date" id="today"></div>
+</header>
+
+<section class="stats no-print">
+  <div class="stat">
+    <span>Productos registrados</span>
+    <strong id="totalProducts">0</strong>
+  </div>
+  <div class="stat">
+    <span>Productos por reponer</span>
+    <strong id="lowProducts">0</strong>
+  </div>
+  <div class="stat">
+    <span>Productos agotados</span>
+    <strong id="outProducts">0</strong>
+  </div>
+</section>
+
+<nav class="tabs no-print">
+  <button class="tab active" data-tab="inventory">Inventario</button>
+  <button class="tab" data-tab="missing">Hace falta</button>
+  <button class="tab" data-tab="report">Reporte diario / PDF</button>
+</nav>
+
+<!-- INVENTARIO -->
+
+<section id="inventory" class="panel">
+
+<h2>Inventario de productos</h2>
+
+<form id="productForm" class="no-print">
+
+<div class="formgrid">
+
+  <div class="field">
+    <label for="name">Producto</label>
+    <input id="name" required placeholder="Ej. Aceite" maxlength="70">
+  </div>
+
+  <div class="field">
+    <label for="category">Categoría</label>
+    <select id="category">
+      <option>Alimentos</option>
+      <option>Bebidas</option>
+      <option>Limpieza</option>
+      <option>Desechables</option>
+      <option>Otros</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="unit">Unidad</label>
+    <select id="unit">
+      <option>Unidades</option>
+      <option>Paquetes</option>
+      <option>Libra</option>
+      <option>Quintal</option>
+      <option>Litros</option>
+      <option>Galones</option>
+      <option>Botellas</option>
+      <option>Cajas</option>
+      <option>Bolsas</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="quantity">Cantidad actual</label>
+    <input id="quantity" type="number" min="0" step="0.01" required placeholder="0">
+  </div>
+
+  <div class="field">
+    <label for="minimum">Mínimo deseado</label>
+    <input id="minimum" type="number" min="0" step="0.01" required placeholder="0">
+  </div>
+
+  <button class="primary" type="submit">Agregar</button>
+
+</div>
+</form>
+
+<div class="toolbar no-print">
+  <input id="search" placeholder="Buscar producto...">
+
+  <select id="filter">
+    <option value="all">Todos los productos</option>
+    <option value="low">Por reponer</option>
+    <option value="out">Agotados</option>
+  </select>
+
+  <button onclick="clearSearch()">Limpiar</button>
+</div>
+
+<div class="tablewrap">
+<table>
+<thead>
+<tr>
+  <th>Producto</th>
+  <th>Categoría</th>
+  <th>Cantidad</th>
+  <th>Mínimo</th>
+  <th>Estado</th>
+  <th class="no-print">Acciones</th>
+</tr>
+</thead>
+<tbody id="inventoryRows"></tbody>
+</table>
+</div>
+
+<p class="note no-print">
+Los cambios se guardan automáticamente en este navegador y dispositivo.
+</p>
+
+</section>
+
+<!-- FALTANTES -->
+
+<section id="missing" class="panel hidden">
+
+<h2>Lista de productos que hacen falta</h2>
+
+<p class="note">
+Aquí aparecen automáticamente los productos cuya cantidad actual está en el mínimo o por debajo.
+</p>
+
+<div id="missingList"></div>
+
+<div class="no-print" style="margin-top:16px">
+  <button class="primary" onclick="showTab('report')">
+    Preparar reporte diario
+  </button>
+</div>
+
+</section>
+
+<!-- REPORTE -->
+
+<section id="report" class="panel hidden">
+
+<div class="reporthead">
+  <div>
+    <h2>Reporte diario</h2>
+    <p class="note">
+      Revisa el inventario y los faltantes antes de generar el documento.
+    </p>
+  </div>
+
+  <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap">
+    <button onclick="renderReport()">Actualizar</button>
+    <button class="primary" onclick="window.print()">Descargar / guardar PDF</button>
+  </div>
+</div>
+
+<div class="reportbox" id="reportContent"></div>
+
+<p class="note no-print">
+Elige "Guardar como PDF" en el destino de impresión del navegador.
+</p>
+
+</section>
+
+</div>
+
+<script>
+
+// DATOS DEL INVENTARIO
+
+const KEY = 'restaurante_inventario_v1';
+
+let products = [];
+
+try {
+  products = JSON.parse(localStorage.getItem(KEY) || '[]');
+} catch(e) {
+  products = [];
+}
+
+const $ = id => document.getElementById(id);
+
+const today = new Date();
+
+const dateText = today.toLocaleDateString('es-GT', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
+
+$('today').textContent =
+  dateText.charAt(0).toUpperCase() + dateText.slice(1);
+
+// GUARDAR
+
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(products));
+  render();
+}
+
+// ESTADO
+
+function status(p) {
+  return p.quantity <= 0
+    ? 'Agotado'
+    : p.quantity <= p.minimum
+    ? 'Por reponer'
+    : 'Disponible';
+}
+
+// MOSTRAR INVENTARIO
+
+function render() {
+
+  const q = $('search').value.toLowerCase();
+  const f = $('filter').value;
+
+  let list = products.filter(p =>
+    p.name.toLowerCase().includes(q)
+  );
+
+  if (f === 'low') {
+    list = list.filter(p =>
+      p.quantity > 0 && p.quantity <= p.minimum
+    );
+  }
+
+  if (f === 'out') {
+    list = list.filter(p => p.quantity <= 0);
+  }
+
+  $('totalProducts').textContent = products.length;
+
+  $('lowProducts').textContent =
+    products.filter(p =>
+      p.quantity > 0 && p.quantity <= p.minimum
+    ).length;
+
+  $('outProducts').textContent =
+    products.filter(p => p.quantity <= 0).length;
+
+  $('inventoryRows').innerHTML = list.length
+    ? list.map(p => {
+
+      let s = status(p);
+
+      let cls = s === 'Agotado'
+        ? 'zero'
+        : s === 'Por reponer'
+        ? 'low'
+        : '';
+
+      return `
+      <tr>
+        <td>
+          <strong>${esc(p.name)}</strong><br>
+          <small>${esc(p.unit)}</small>
+        </td>
+        <td>${esc(p.category)}</td>
+        <td>${p.quantity}</td>
+        <td>${p.minimum}</td>
+        <td><span class="status ${cls}">${s}</span></td>
+        <td class="no-print">
+          <div class="actions">
+            <button class="small" onclick="changeQty('${p.id}',-1)">−</button>
+            <button class="small" onclick="changeQty('${p.id}',1)">+</button>
+            <button class="small danger" onclick="removeProduct('${p.id}')">Eliminar</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')
+    : '<tr><td colspan="6" class="empty">No hay productos para mostrar.</td></tr>';
+
+  renderMissing();
+  renderReport();
+}
+
+// PROTEGER TEXTO
+
+function esc(v) {
+  return String(v).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+// AGREGAR PRODUCTOS
+
+$('productForm').addEventListener('submit', e => {
+
+  e.preventDefault();
+
+  let name = $('name').value.trim();
+
+  if (!name) return;
+
+  products.push({
+    id: Date.now().toString() +
+      Math.random().toString(16).slice(2),
+    name,
+    category: $('category').value,
+    unit: $('unit').value,
+    quantity: Number($('quantity').value),
+    minimum: Number($('minimum').value)
+  });
+
+  e.target.reset();
+  save();
+});
+
+// SUMAR Y RESTAR
+
+function changeQty(id, delta) {
+
+  let p = products.find(x => x.id === id);
+
+  if (p) {
+    p.quantity = Math.max(
+      0,
+      Math.round((p.quantity + delta) * 100) / 100
+    );
+    save();
+  }
+}
+
+// ELIMINAR
+
+function removeProduct(id) {
+
+  if (confirm('¿Seguro que deseas eliminar este producto?')) {
+    products = products.filter(p => p.id !== id);
+    save();
+  }
+}
+
+// FALTANTES
+
+function renderMissing() {
+
+  let arr = products.filter(p =>
+    p.quantity <= p.minimum
+  );
+
+  $('missingList').innerHTML = arr.length
+    ? arr.map(p => `
+      <div class="missing-item">
+        <div>
+          <strong>${esc(p.name)}</strong>
+          <small>
+            ${esc(p.category)}
+            · Hay ${p.quantity} ${esc(p.unit)}
+            · Mínimo: ${p.minimum}
+          </small>
+        </div>
+        <div>
+          <small>Cantidad a comprar</small>
+          <input
+            aria-label="Cantidad a comprar para ${esc(p.name)}"
+            type="number"
+            min="0"
+            step="0.01"
+            value="${Math.max(0, p.minimum - p.quantity)}"
+            data-buy="${p.id}"
+          >
+        </div>
+      </div>
+    `).join('')
+    : '<p class="empty">¡Todo está abastecido! No hay productos por reponer.</p>';
+}
+
+// REPORTE DIARIO
+
+function renderReport() {
+
+  let low = products.filter(p =>
+    p.quantity <= p.minimum
+  );
+
+  const responsible =
+    localStorage.getItem('restaurante_cierre_responsable') || '';
+
+  const method =
+    localStorage.getItem('restaurante_cierre_metodo') || 'draw';
+
+  const typed =
+    localStorage.getItem('restaurante_cierre_firma_texto') || '';
+
+  const savedDrawing =
+    localStorage.getItem('restaurante_cierre_firma_dibujo') || '';
+
+  $('reportContent').innerHTML = `
+
+    <div class="print-only">
+      <h1>Reporte diario de inventario</h1>
+    </div>
+
+    <h3>Restaurante · Control diario</h3>
+    <p><strong>Fecha:</strong> ${dateText}</p>
+
+    <p>
+      <strong>Total de productos:</strong> ${products.length}
+      &nbsp; | &nbsp;
+      <strong>Por reponer:</strong> ${low.length}
+      &nbsp; | &nbsp;
+      <strong>Agotados:</strong>
+      ${products.filter(p => p.quantity <= 0).length}
+    </p>
+
+    <h3 style="margin-top:20px">Inventario general</h3>
+
+    ${products.length ? `
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Existencia</th>
+            <th>Mínimo</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(p => `
+            <tr>
+              <td>${esc(p.name)} (${esc(p.unit)})</td>
+              <td>${esc(p.category)}</td>
+              <td>${p.quantity}</td>
+              <td>${p.minimum}</td>
+              <td>${status(p)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : '<p>No hay productos registrados.</p>'}
+
+    <h3 style="margin-top:22px">Productos que hacen falta</h3>
+
+    ${low.length ? `
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Existencia</th>
+            <th>Mínimo</th>
+            <th>Faltante para llegar al mínimo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${low.map(p => `
+            <tr>
+              <td>${esc(p.name)}</td>
+              <td>${p.quantity} ${esc(p.unit)}</td>
+              <td>${p.minimum}</td>
+              <td>${Math.max(0, p.minimum - p.quantity)} ${esc(p.unit)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    ` : '<p>No hay faltantes registrados.</p>'}
+
+    <!-- FIRMA DEL RESPONSABLE -->
+
+    <div class="signature-area">
+
+      <h3>Responsable del cierre / pedido</h3>
+
+      <div class="field no-print-signature" style="max-width:420px;margin:10px 0">
+        <label for="closingResponsible">
+          Nombre de quien realizó el cierre o pedido
+        </label>
+        <input
+          id="closingResponsible"
+          maxlength="100"
+          placeholder="Escribe el nombre del responsable"
+          value="${esc(responsible)}"
+        >
+      </div>
+
+      <p class="signature-print-name">
+        <strong>Responsable:</strong>
+        ${esc(responsible) || '________________________________'}
+      </p>
+
+      <div class="no-print-signature" style="max-width:420px;margin:10px 0">
+        <label for="signatureMethod">Forma de firma</label>
+        <select id="signatureMethod">
+          <option value="draw" ${method === 'draw' ? 'selected' : ''}>Dibujar firma</option>
+          <option value="type" ${method === 'type' ? 'selected' : ''}>Escribir firma</option>
+        </select>
+      </div>
+
+      <div class="signature-grid">
+
+        <div class="signature-box" id="drawSignatureBox">
+          <label>Firma dibujada</label>
+
+          <canvas
+            id="signatureCanvas"
+            class="signature-canvas"
+            aria-label="Espacio para dibujar la firma">
+          </canvas>
+
+          <div class="signature-actions no-print-signature">
+            <button type="button" class="small" id="clearSignature">
+              Borrar firma
+            </button>
+          </div>
+
+          <p class="signature-help no-print-signature">
+            Dibuja con el mouse o con el dedo si usas una pantalla táctil.
+          </p>
+        </div>
+
+        <div class="signature-box" id="typeSignatureBox">
+          <label for="typedSignature">Firma escrita</label>
+
+          <input
+            id="typedSignature"
+            class="signature-input"
+            maxlength="100"
+            placeholder="Escribe tu firma"
+            value="${esc(typed)}"
+          >
+
+          <p class="signature-help no-print-signature">
+            Escribe tu nombre como firma.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  setupSignature(method, savedDrawing);
+}
+
+// CONFIGURAR FIRMA
+
+function setupSignature(method, savedDrawing) {
+
+  const canvas = $('signatureCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function sizeCanvas() {
+
+    const ratio = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+
+    canvas.width = Math.max(1, Math.round(rect.width * ratio));
+    canvas.height = Math.max(1, Math.round(rect.height * ratio));
+
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#111';
+
+    if (savedDrawing) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      img.src = savedDrawing;
+    }
+  }
+
+  sizeCanvas();
+
+  let drawing = false;
+
+  function point(e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - r.left,
+      y: e.clientY - r.top
+    };
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    drawing = true;
+    const p = point(e);
+    canvas.setPointerCapture(e.pointerId);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+
+  canvas.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const p = point(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+
+  function stop() {
+    if (!drawing) return;
+    drawing = false;
+
+    localStorage.setItem(
+      'restaurante_cierre_firma_dibujo',
+      canvas.toDataURL('image/png')
+    );
+  }
+
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointercancel', stop);
+
+  $('clearSignature').addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    localStorage.removeItem('restaurante_cierre_firma_dibujo');
+    savedDrawing = '';
+  });
+
+  $('closingResponsible').addEventListener('input', e => {
+
+    localStorage.setItem(
+      'restaurante_cierre_responsable',
+      e.target.value
+    );
+
+    document.querySelector('.signature-print-name').innerHTML =
+      '<strong>Responsable:</strong> ' +
+      (esc(e.target.value) || '________________________________');
+  });
+
+  $('signatureMethod').addEventListener('change', e => {
+
+    localStorage.setItem(
+      'restaurante_cierre_metodo',
+      e.target.value
+    );
+
+    applySignatureMethod(e.target.value);
+  });
+
+  $('typedSignature').addEventListener('input', e => {
+
+    localStorage.setItem(
+      'restaurante_cierre_firma_texto',
+      e.target.value
+    );
+  });
+
+  applySignatureMethod(method);
+}
+
+// MOSTRAR TIPO DE FIRMA
+
+function applySignatureMethod(method) {
+
+  $('drawSignatureBox').style.display =
+    method === 'draw' ? 'block' : 'none';
+
+  $('typeSignatureBox').style.display =
+    method === 'type' ? 'block' : 'none';
+}
+
+// CAMBIAR APARTADOS
+
+function showTab(id) {
+
+  document.querySelectorAll('section.panel').forEach(s => {
+    s.classList.toggle('hidden', s.id !== id);
+  });
+
+  document.querySelectorAll('.tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === id);
+  });
+
+  if (id === 'report') {
+    renderReport();
+  }
+}
+
+// BOTONES DEL MENÚ
+
+document.querySelectorAll('.tab').forEach(b => {
+  b.addEventListener('click', () => showTab(b.dataset.tab));
+});
+
+$('search').addEventListener('input', render);
+$('filter').addEventListener('change', render);
+
+function clearSearch() {
+  $('search').value = '';
+  $('filter').value = 'all';
+  render();
+}
+
+// INICIAR
+
+render();
+
+</script>
+
+</body>
+</html>
